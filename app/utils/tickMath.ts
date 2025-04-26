@@ -1,5 +1,5 @@
 import { encodeSqrtRatioX96, TickMath } from "@uniswap/v3-sdk";
-import JSBI from "jsbi"; // 🛠 import this manually!
+import JSBI from "jsbi";
 
 export function priceToTick(
   price: number,

@@ -3,6 +3,7 @@ import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { prepareAgentkitAndWalletProvider } from "./prepare-agentkit";
+import { AddLiquidityTool } from "@/app/agent/tools/addLiquidityTool";
 
 /**
  * Agent Configuration Guide
@@ -46,7 +47,10 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
     // Initialize LLM: https://platform.openai.com/docs/models#gpt-4o
     const llm = new ChatOpenAI({ model: "gpt-4o-mini" });
 
-    const tools = await getLangChainTools(agentkit);
+    // const tools = await getLangChainTools(agentkit);
+    const toolsFromAgentKit = await getLangChainTools(agentkit);
+    const tools = [...toolsFromAgentKit, AddLiquidityTool];
+
     const memory = new MemorySaver();
 
     // Initialize Agent
