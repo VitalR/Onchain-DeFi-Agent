@@ -4,6 +4,9 @@ import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { ChatOpenAI } from "@langchain/openai";
 import { prepareAgentkitAndWalletProvider } from "./prepare-agentkit";
 import { AddLiquidityTool } from "@/app/agent/tools/addLiquidityTool";
+import { ApproveTokensTool } from "@/app/agent/tools/approveTokensTool";
+import { CheckNativeBalanceTool } from "@/app/agent/tools/checkNativeBalanceTool";
+import { CheckTokenBalanceTool } from "@/app/agent/tools/checkTokenBalanceTool";
 
 /**
  * Agent Configuration Guide
@@ -49,7 +52,7 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
 
     // const tools = await getLangChainTools(agentkit);
     const toolsFromAgentKit = await getLangChainTools(agentkit);
-    const tools = [...toolsFromAgentKit, AddLiquidityTool];
+    const tools = [...toolsFromAgentKit, AddLiquidityTool, ApproveTokensTool, CheckNativeBalanceTool, CheckTokenBalanceTool,];
 
     const memory = new MemorySaver();
 
@@ -68,8 +71,19 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
         you're on. If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
         asks you to do something you can't do with your currently available tools, you must say so, and 
         encourage them to implement it themselves using the CDP SDK + Agentkit, recommend they go to 
-        docs.cdp.coinbase.com for more information. Be concise and helpful with your responses. Refrain from 
-        restating your tools' descriptions unless it is explicitly requested.
+        docs.cdp.coinbase.com for more information. 
+        Be concise and helpful with your responses. 
+        Refrain from restating your tools' descriptions unless it is explicitly requested.
+        When the user asks about ETH balance, ALWAYS call 'check_native_balance'.
+  
+        When the user asks about any ERC20 token balance (e.g., EURC, USDC, stablecoin), you MUST call 'check_token_balance' tool immediately without asking.
+
+        Known tokens are:
+        - EURC => 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
+        - USDC => 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+
+        Do not guess. Always run the correct function based on user’s token names. Do not engage in conversation instead of function calling.
+        Be concise.
         `,
     });
 
