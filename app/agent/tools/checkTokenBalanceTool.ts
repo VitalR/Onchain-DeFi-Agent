@@ -7,18 +7,18 @@ const KNOWN_TOKENS: Record<string, `0x${string}`> = {
 
 export const CheckTokenBalanceTool: AgentTool = {
   name: "check_token_balance",
-  description: "Fetches the balance(s) of known ERC20 tokens like EURC and USDC on Base Mainnet.",
+  description: "Fetches ERC20 token balances.",
   type: "function",
   function: {
     name: "check_token_balance",
-    description: "Fetch ERC20 balances by token name (e.g., EURC, USDC).",
+    description: "Fetch ERC20 balance for given token names.",
     parameters: {
       type: "object",
       properties: {
         tokenNames: {
           type: "array",
           items: { type: "string" },
-          description: "List of token names (e.g., ['EURC', 'USDC']) or ERC20 addresses.",
+          description: "List of token names or addresses",
         }
       },
       required: ["tokenNames"],
@@ -26,13 +26,18 @@ export const CheckTokenBalanceTool: AgentTool = {
   },
   run: async (params) => {
     const { tokenNames } = params as { tokenNames: string[] };
+    const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/agent/check-token-balance`;
 
     const results: string[] = [];
 
     for (const tokenName of tokenNames) {
       const resolvedAddress = KNOWN_TOKENS[tokenName.toUpperCase()] || tokenName;
 
-      const res = await fetch(`/api/agent/check-token-balance?tokenAddress=${resolvedAddress}`, { method: "GET" });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenAddress: resolvedAddress }),
+      });
 
       if (!res.ok) {
         results.push(`Failed to fetch balance for ${tokenName}`);
@@ -40,7 +45,7 @@ export const CheckTokenBalanceTool: AgentTool = {
       }
 
       const data = await res.json();
-      results.push(`✅ ${data.symbol} (${data.tokenAddress}): ${data.balance}`);
+      results.push(`${tokenName.toUpperCase()}: ${data.balance}`);
     }
 
     return results.join("\n");
