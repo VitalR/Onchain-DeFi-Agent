@@ -7,6 +7,7 @@ import { AddLiquidityTool } from "@/app/agent/tools/addLiquidityTool";
 import { ApproveTokensTool } from "@/app/agent/tools/approveTokensTool";
 import { CheckNativeBalanceTool } from "@/app/agent/tools/checkNativeBalanceTool";
 import { CheckTokenBalanceTool } from "@/app/agent/tools/checkTokenBalanceTool";
+import { SwapTokensTool } from "@/app/agent/tools/swapTokensTool";
 
 /**
  * Agent Configuration Guide
@@ -24,7 +25,13 @@ import { CheckTokenBalanceTool } from "@/app/agent/tools/checkTokenBalanceTool";
  *    - Configure agent-specific parameters
  */
 
-// The agent
+// === Known Tokens Mapping ===
+const KNOWN_TOKENS = {
+  EURC: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+  USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+};
+
+// === Agent Singleton ===
 let agent: ReturnType<typeof createReactAgent>;
 
 /**
@@ -39,58 +46,69 @@ let agent: ReturnType<typeof createReactAgent>;
  * @throws {Error} If the agent initialization fails.
  */
 export async function createAgent(): Promise<ReturnType<typeof createReactAgent>> {
-  // If agent has already been initialized, return it
-  if (agent) {
-    return agent;
-  }
+  if (agent) return agent;
 
   try {
-    const { agentkit, walletProvider } = await prepareAgentkitAndWalletProvider();
-
-    // Initialize LLM: https://platform.openai.com/docs/models#gpt-4o
-    const llm = new ChatOpenAI({ model: "gpt-4o-mini" });
-
-    // const tools = await getLangChainTools(agentkit);
+    const { agentkit, walletProvider } = await prepareAgentkitAndWalletProvider()
+    const llm = new ChatOpenAI({
+      model: "gpt-4o-mini",
+      temperature: 0,
+      timeout: 60000, // 60 seconds, prevent infinite hanging if OpenAI API is slow
+      // toolChoice: "auto",
+    });
+    
     const toolsFromAgentKit = await getLangChainTools(agentkit);
-    const tools = [...toolsFromAgentKit, AddLiquidityTool, ApproveTokensTool, CheckNativeBalanceTool, CheckTokenBalanceTool,];
-
+    const tools = [
+      ...toolsFromAgentKit,
+      AddLiquidityTool,
+      ApproveTokensTool,
+      CheckNativeBalanceTool,
+      CheckTokenBalanceTool,
+      SwapTokensTool,
+    ];
     const memory = new MemorySaver();
 
-    // Initialize Agent
     const canUseFaucet = walletProvider.getNetwork().networkId == "base-sepolia";
     const faucetMessage = `If you ever need funds, you can request them from the faucet.`;
     const cantUseFaucetMessage = `If you need funds, you can provide your wallet details and request funds from the user.`;
+
     agent = createReactAgent({
       llm,
       tools,
       checkpointSaver: memory,
-      messageModifier: `
-        You are a helpful agent that can interact onchain using the Coinbase Developer Platform AgentKit. You are 
-        empowered to interact onchain using your tools. ${canUseFaucet ? faucetMessage : cantUseFaucetMessage}.
-        Before executing your first action, get the wallet details to see what network 
-        you're on. If there is a 5XX (internal) HTTP error code, ask the user to try again later. If someone 
-        asks you to do something you can't do with your currently available tools, you must say so, and 
-        encourage them to implement it themselves using the CDP SDK + Agentkit, recommend they go to 
-        docs.cdp.coinbase.com for more information. 
-        Be concise and helpful with your responses. 
-        Refrain from restating your tools' descriptions unless it is explicitly requested.
+      prompt: `
+        You are a helpful onchain DeFi agent operating on Base Mainnet via Coinbase AgentKit.
 
-        Always follow these strict rules:
-        - When asked about ETH balance, immediately use the 'check_native_balance' tool.
-        - When asked about any ERC20 token (e.g., EURC, USDC, stablecoins), immediately use the 'check_token_balance' tool.
+        Tool Usage Policy:
+        - You MUST always use a tool if one is available to answer the user request.
+        - NEVER fabricate answers or guess token balances.
+        - If you lack sufficient information, call the appropriate tool.
 
-        Known tokens are:
-        - EURC => 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
-        - USDC => 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
-        
-        - If the token is unknown (not pre-listed), inform the user politely:
-        "I can't check your [TOKEN] balance automatically. However, if you provide the token's contract address, I can fetch the balance for you."
-        - Do not guess or create fake answers.
-        - Do not ask users for token addresses for EURC or USDC.
+        Balance Rules:
+        - For ETH balance requests, use the 'check_native_balance' tool.
+        - For ERC20 balances (EURC, USDC), use the 'check_token_balance' tool.
+        - EURC address: 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
+        - USDC address: 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913
+        - If token is unknown, politely ask the user to provide the token contract address.
+        - Wait for the tool response before replying.
 
-        Always run the correct function based on user’s token names. Do not engage in conversation instead of function calling.
-        Be concise.
-        `,
+        Swap Rules:
+        - If the user says "swap X EURC to USDC" or similar:
+          - Call the 'swap_tokens' tool.
+          - Convert human-readable amounts to token decimals:
+            - EURC and USDC have 6 decimals.
+            - Multiply by 10^6.
+          - If no minAmountOut is provided, set it to 0.
+
+        Response Behavior:
+        - Respond concisely and based on actual tool results.
+        - If a tool fails (5xx error), suggest the user retry later.
+        - Never proceed without tool confirmation.
+
+        ${canUseFaucet 
+          ? "If needed, you can also recommend the user request funds from the faucet." 
+          : "If needed, suggest the user provide a wallet address for fund requests."}
+              `.trim(),
     });
 
     return agent;
