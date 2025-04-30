@@ -7,6 +7,7 @@ import { AddLiquidityTool } from '@/app/agent/tools/addLiquidityTool';
 import { ApproveTokensTool } from '@/app/agent/tools/approveTokensTool';
 import { ApproveStablecoinsTool } from '@/app/agent/tools/approveStablecoinsTool';
 import { CheckNativeBalanceTool } from '@/app/agent/tools/checkNativeBalanceTool';
+import { CheckTokenAllowanceTool } from '@/app/agent/tools/checkTokenAllowanceTool';
 import { CheckTokenBalanceTool } from '@/app/agent/tools/checkTokenBalanceTool';
 import { SwapTokensTool } from '@/app/agent/tools/swapTokensTool';
 
@@ -67,6 +68,7 @@ export async function createAgent(): Promise<
       ApproveTokensTool,
       ApproveStablecoinsTool,
       CheckNativeBalanceTool,
+      CheckTokenAllowanceTool,
       CheckTokenBalanceTool,
       SwapTokensTool,
     ];
@@ -86,7 +88,7 @@ export async function createAgent(): Promise<
 
         Tool Usage Policy:
         - You MUST always use a tool if one is available to answer the user request.
-        - NEVER fabricate answers or guess token balances.
+        - NEVER fabricate answers or guess token balances or allowances.
         - If you lack sufficient information, call the appropriate tool.
 
         Balance Rules:
@@ -97,6 +99,24 @@ export async function createAgent(): Promise<
         - If token is unknown, politely ask the user to provide the token contract address.
         - Wait for the tool response before replying.
 
+        Important: Do not ignore allowance-related questions. Always resolve them with 'check_token_allowance'.
+
+        Allowance Rules:
+        - When the user asks:
+        - "How much EURC is approved?"
+        - "What is my USDC allowance?"
+        - "Has Aerodrome access to my tokens?"
+        - "Check if I approved EURC"
+        - "Check my EURC or USDC allowance"
+        - "Do I need to approve EURC before swapping?"
+        - "How much have I approved for the Aerodrome Router?"
+        -> Always use the 'check_token_allowance' tool with the token address.
+        - Always resolve token names to addresses using:
+          - EURC: 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
+          - USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+          - If the token is unknown, ask the user for its ERC20 address.
+          - Return the raw allowance or a readable summary (e.g., "You have approved 0.00 EURC").
+        
         Approval Rules:
         - When a user says something like "Allow Aerodrome to use my stablecoins":
           - Ask if they want to approve all stablecoins (EURC, USDC) or specific ones.

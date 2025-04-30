@@ -14,10 +14,7 @@ const ERC20_ABI = [
   },
 ];
 
-// Aerodrome Router address
 const ROUTER_ADDRESS = '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43';
-
-// Max uint256 value for unlimited approvals
 const MAX_UINT256 =
   '115792089237316195423570985008687907853269984665640564039457584007913129639935';
 
@@ -26,11 +23,9 @@ export async function POST(request: Request) {
     const client = await getClient();
     const body = await request.json().catch(() => ({}));
 
-    // Default to EURC if no token specified
     const tokenAddress =
       body.tokenAddress || '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42';
 
-    // Use specified amount or default to max approval
     const amount = body.amount || MAX_UINT256;
 
     console.log(
@@ -38,7 +33,6 @@ export async function POST(request: Request) {
     );
 
     const txHash = await client.sendOnchainAction({
-      chainId: 8453, // Base Mainnet
       contractAddress: tokenAddress,
       abi: ERC20_ABI,
       functionName: 'approve',
@@ -53,7 +47,7 @@ export async function POST(request: Request) {
       amount,
     });
   } catch (error: any) {
-    console.error('Approve Tokens Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Approve Tokens Error:', error.message || error);
+    return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
   }
 }
