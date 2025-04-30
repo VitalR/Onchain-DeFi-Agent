@@ -22,11 +22,17 @@ const ERC20_ABI = [
 
 export async function POST(request: Request) {
   try {
-    const { tokenAddress } = await request.json();
+    const body = await request.json();
 
-    if (!tokenAddress) {
+    let tokenAddresses: string[] = [];
+
+    if (body.tokenAddresses && Array.isArray(body.tokenAddresses)) {
+      tokenAddresses = body.tokenAddresses;
+    } else if (body.tokenAddress && typeof body.tokenAddress === 'string') {
+      tokenAddresses = [body.tokenAddress]; // single token fallback
+    } else {
       return NextResponse.json(
-        { error: 'Missing tokenAddress' },
+        { error: 'Missing or invalid tokenAddresses' },
         { status: 400 }
       );
     }
@@ -36,27 +42,41 @@ export async function POST(request: Request) {
       transport: http(process.env.ALCHEMY_API_KEY_MAINNET_URL!),
     });
 
-    const walletAddress = '0xdF1C7676c27a35cf460c350BDF7Fe90123109b1D';
+    const walletAddress =
+      '0xdF1C7676c27a35cf460c350BDF7Fe90123109b1D' as `0x${string}`;
 
-    const decimalsRaw = await publicClient.readContract({
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'decimals',
-      args: [],
-    });
+    const results: Record<string, string> = {};
 
-    const decimals = Number(decimalsRaw);
+    for (const tokenAddress of tokenAddresses) {
+      const formattedTokenAddress = tokenAddress as `0x${string}`;
 
-    const balanceRaw = await publicClient.readContract({
-      address: tokenAddress,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [walletAddress],
-    });
+      const decimalsRaw = await publicClient.readContract({
+        address: formattedTokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'decimals',
+        args: [],
+      });
 
-    const balanceFormatted = formatUnits(balanceRaw, decimals);
+      const decimals = Number(decimalsRaw);
 
-    return NextResponse.json({ balance: balanceFormatted });
+      const balanceRaw = await publicClient.readContract({
+        address: formattedTokenAddress,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [walletAddress],
+      });
+
+      results[tokenAddress] = formatUnits(balanceRaw as bigint, decimals);
+    }
+
+    if (tokenAddresses.length === 1) {
+      return NextResponse.json({
+        balances: results,
+        balance: results[tokenAddresses[0]],
+      });
+    }
+
+    return NextResponse.json({ balances: results });
   } catch (error: any) {
     console.error('[check-token-balance] Error:', error.message || error);
     return NextResponse.json(

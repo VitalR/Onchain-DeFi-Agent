@@ -1,19 +1,11 @@
-import { AgentTool } from '@coinbase/agentkit';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
 
-export const CheckNativeBalanceTool: AgentTool = {
+export const CheckNativeBalanceTool = new DynamicStructuredTool({
   name: 'check_native_balance',
   description: "Checks the agent's ETH balance on Base Mainnet.",
-  type: 'function',
-  function: {
-    name: 'check_native_balance',
-    description: 'Fetches native ETH balance on Base.',
-    parameters: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-  },
-  run: async () => {
+  schema: z.object({}),
+  func: async () => {
     const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/agent/check-native-balance`;
 
     const res = await fetch(url, { method: 'POST' });
@@ -32,4 +24,4 @@ export const CheckNativeBalanceTool: AgentTool = {
 
     return { ETH: data.balance }; // MUST return object
   },
-};
+});

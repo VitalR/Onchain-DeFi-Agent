@@ -13,7 +13,7 @@
     "@coinbase/agentkit": "^0.6.0",
     "@coinbase/agentkit-langchain": "^0.3.0",
     "@coinbase/agentkit-vercel-ai-sdk": "^0.1.0",
-    "@langchain/core": "^0.3.19",
+    "@langchain/core": "^0.3.50",
     "@langchain/langgraph": "^0.2.21",
     "@langchain/openai": "^0.3.14",
     "@solana/web3.js": "^1.98.0",
@@ -23,12 +23,14 @@
     "ai": "^4.1.54",
     "bs58": "^6.0.0",
     "jsbi": "^4.3.2",
+    "langchain": "^0.3.24",
     "next": "14.2.15",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.0.0",
     "viem": "^2.24.1",
-    "wagmi": "^2.11.0"
+    "wagmi": "^2.11.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/node": "^20",

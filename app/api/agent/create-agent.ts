@@ -1,13 +1,13 @@
-import { getLangChainTools } from "@coinbase/agentkit-langchain";
-import { MemorySaver } from "@langchain/langgraph";
-import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { ChatOpenAI } from "@langchain/openai";
-import { prepareAgentkitAndWalletProvider } from "./prepare-agentkit";
-import { AddLiquidityTool } from "@/app/agent/tools/addLiquidityTool";
-import { ApproveTokensTool } from "@/app/agent/tools/approveTokensTool";
-import { CheckNativeBalanceTool } from "@/app/agent/tools/checkNativeBalanceTool";
-import { CheckTokenBalanceTool } from "@/app/agent/tools/checkTokenBalanceTool";
-import { SwapTokensTool } from "@/app/agent/tools/swapTokensTool";
+import { getLangChainTools } from '@coinbase/agentkit-langchain';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatOpenAI } from '@langchain/openai';
+import { prepareAgentkitAndWalletProvider } from './prepare-agentkit';
+import { AddLiquidityTool } from '@/app/agent/tools/addLiquidityTool';
+import { ApproveTokensTool } from '@/app/agent/tools/approveTokensTool';
+import { CheckNativeBalanceTool } from '@/app/agent/tools/checkNativeBalanceTool';
+import { CheckTokenBalanceTool } from '@/app/agent/tools/checkTokenBalanceTool';
+import { SwapTokensTool } from '@/app/agent/tools/swapTokensTool';
 
 /**
  * Agent Configuration Guide
@@ -27,8 +27,8 @@ import { SwapTokensTool } from "@/app/agent/tools/swapTokensTool";
 
 // === Known Tokens Mapping ===
 const KNOWN_TOKENS = {
-  EURC: "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
-  USDC: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  EURC: '0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42',
+  USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
 };
 
 // === Agent Singleton ===
@@ -45,18 +45,20 @@ let agent: ReturnType<typeof createReactAgent>;
  *
  * @throws {Error} If the agent initialization fails.
  */
-export async function createAgent(): Promise<ReturnType<typeof createReactAgent>> {
+export async function createAgent(): Promise<
+  ReturnType<typeof createReactAgent>
+> {
   if (agent) return agent;
 
   try {
-    const { agentkit, walletProvider } = await prepareAgentkitAndWalletProvider()
+    const { agentkit, walletProvider } =
+      await prepareAgentkitAndWalletProvider();
     const llm = new ChatOpenAI({
-      model: "gpt-4o-mini",
+      model: 'gpt-4o-mini',
       temperature: 0,
       timeout: 60000, // 60 seconds, prevent infinite hanging if OpenAI API is slow
-      // toolChoice: "auto",
     });
-    
+
     const toolsFromAgentKit = await getLangChainTools(agentkit);
     const tools = [
       ...toolsFromAgentKit,
@@ -68,7 +70,8 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
     ];
     const memory = new MemorySaver();
 
-    const canUseFaucet = walletProvider.getNetwork().networkId == "base-sepolia";
+    const canUseFaucet =
+      walletProvider.getNetwork().networkId == 'base-sepolia';
     const faucetMessage = `If you ever need funds, you can request them from the faucet.`;
     const cantUseFaucetMessage = `If you need funds, you can provide your wallet details and request funds from the user.`;
 
@@ -105,15 +108,17 @@ export async function createAgent(): Promise<ReturnType<typeof createReactAgent>
         - If a tool fails (5xx error), suggest the user retry later.
         - Never proceed without tool confirmation.
 
-        ${canUseFaucet 
-          ? "If needed, you can also recommend the user request funds from the faucet." 
-          : "If needed, suggest the user provide a wallet address for fund requests."}
+        ${
+          canUseFaucet
+            ? 'If needed, you can also recommend the user request funds from the faucet.'
+            : 'If needed, suggest the user provide a wallet address for fund requests.'
+        }
               `.trim(),
     });
 
     return agent;
   } catch (error) {
-    console.error("Error initializing agent:", error);
-    throw new Error("Failed to initialize agent");
+    console.error('Error initializing agent:', error);
+    throw new Error('Failed to initialize agent');
   }
 }

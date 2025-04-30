@@ -22,14 +22,14 @@ async function testNativeBalance() {
   }
 }
 
-async function testTokenBalance(tokenAddress: string, tokenName: string) {
+async function testTokenBalance(tokenAddresses: string[], tokenName: string) {
   try {
     console.log(`Testing ERC20 token balance fetch for ${tokenName}...`);
 
     const res = await fetch(`${SITE_URL}/api/agent/check-token-balance`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokenAddress }),
+      body: JSON.stringify({ tokenAddresses }),
     });
 
     if (!res.ok) {
@@ -38,7 +38,7 @@ async function testTokenBalance(tokenAddress: string, tokenName: string) {
     }
 
     const data = await res.json();
-    console.log(`✅ ${tokenName} balance:`, data.balance);
+    console.log(`✅ ${tokenName} balance:`, data.balances[tokenAddresses[0]]);
   } catch (error) {
     console.error(`❌ Error in testTokenBalance for ${tokenName}:`, error);
   }
@@ -49,9 +49,13 @@ async function main() {
 
   await testNativeBalance();
 
-  await testTokenBalance("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42", "EURC");
-  await testTokenBalance("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC");
-  await testTokenBalance("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2", "USDT");
+  await testTokenBalance(["0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42"], "EURC");
+  await testTokenBalance(["0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"], "USDC");
+  await testTokenBalance(["0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"], "USDT");
+
+//   await testTokenBalance("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42", "EURC");
+//   await testTokenBalance("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "USDC");
+//   await testTokenBalance("0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2", "USDT");
 
   console.log("\n=== Local agent tests completed ===\n");
 }
