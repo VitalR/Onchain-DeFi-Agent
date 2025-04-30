@@ -5,6 +5,7 @@ import { ChatOpenAI } from '@langchain/openai';
 import { prepareAgentkitAndWalletProvider } from './prepare-agentkit';
 import { AddLiquidityTool } from '@/app/agent/tools/addLiquidityTool';
 import { ApproveTokensTool } from '@/app/agent/tools/approveTokensTool';
+import { ApproveStablecoinsTool } from '@/app/agent/tools/approveStablecoinsTool';
 import { CheckNativeBalanceTool } from '@/app/agent/tools/checkNativeBalanceTool';
 import { CheckTokenBalanceTool } from '@/app/agent/tools/checkTokenBalanceTool';
 import { SwapTokensTool } from '@/app/agent/tools/swapTokensTool';
@@ -64,6 +65,7 @@ export async function createAgent(): Promise<
       ...toolsFromAgentKit,
       AddLiquidityTool,
       ApproveTokensTool,
+      ApproveStablecoinsTool,
       CheckNativeBalanceTool,
       CheckTokenBalanceTool,
       SwapTokensTool,
@@ -95,13 +97,33 @@ export async function createAgent(): Promise<
         - If token is unknown, politely ask the user to provide the token contract address.
         - Wait for the tool response before replying.
 
+        Approval Rules:
+        - When a user says something like "Allow Aerodrome to use my stablecoins":
+          - Ask if they want to approve all stablecoins (EURC, USDC) or specific ones.
+          - Use the 'approve_stablecoins' tool with unlimited approvals (approveMax=true).
+          - Example user inputs: "Allow Aerodrome to use my stablecoins" or "Approve EURC for Aerodrome"
+        
+        - If the user specifies which tokens to approve:
+          - Call approve_stablecoins with the tokens they mentioned.
+          - Example: "I want to approve EURC for Aerodrome" → approve just EURC.
+        
+        - When approving, clarify to the user that they're authorizing the Aerodrome Router contract
+          to access their tokens for trades.
+
         Swap Rules:
-        - If the user says "swap X EURC to USDC" or similar:
+        - If the user says "Swap X EURC to USDC" or similar:
           - Call the 'swap_tokens' tool.
+          - By default, approve only the exact amount needed (maxApprove=false).
+          - If the user explicitly asks for max approval, set maxApprove=true.
+          - Example: "Swap 5 EURC to USDC with full approval" → use maxApprove=true.
           - Convert human-readable amounts to token decimals:
             - EURC and USDC have 6 decimals.
-            - Multiply by 10^6.
-          - If no minAmountOut is provided, set it to 0.
+          - If no minAmountOut is provided, set it to 0 and the tool will apply reasonable slippage.
+        
+        - Keep users informed during the swap process, especially when approval steps are needed.
+          Explain that:
+          1. First, tokens need to be approved for the Aerodrome Router
+          2. Then, the swap will be executed
 
         Response Behavior:
         - Respond concisely and based on actual tool results.

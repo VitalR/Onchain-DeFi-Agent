@@ -2,23 +2,25 @@ import { NextResponse } from 'next/server';
 import { createPublicClient, http } from 'viem';
 import { base } from 'viem/chains';
 
+// ERC20 ABI for decimals
 const ERC20_ABI = [
   {
-    name: 'decimals',
-    type: 'function',
     inputs: [],
-    outputs: [{ name: '', type: 'uint8' }],
+    name: 'decimals',
+    outputs: [{ internalType: 'uint8', name: '', type: 'uint8' }],
     stateMutability: 'view',
+    type: 'function',
   },
 ];
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { tokenAddress } = await req.json();
+    const body = await request.json();
+    const { tokenAddress } = body;
 
-    if (!tokenAddress) {
+    if (!tokenAddress || typeof tokenAddress !== 'string') {
       return NextResponse.json(
-        { error: 'Missing tokenAddress' },
+        { error: 'Missing or invalid tokenAddress' },
         { status: 400 }
       );
     }
@@ -28,16 +30,23 @@ export async function POST(req: Request) {
       transport: http(process.env.ALCHEMY_API_KEY_MAINNET_URL!),
     });
 
-    const decimals = await publicClient.readContract({
-      address: tokenAddress as `0x${string}`,
+    const formattedTokenAddress = tokenAddress as `0x${string}`;
+
+    const decimalsRaw = await publicClient.readContract({
+      address: formattedTokenAddress,
       abi: ERC20_ABI,
       functionName: 'decimals',
       args: [],
     });
 
+    const decimals = Number(decimalsRaw);
+
     return NextResponse.json({ decimals });
   } catch (error: any) {
-    console.error('Fetch token decimals error:', error.message || error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[fetch-token-decimals] Error:', error.message || error);
+    return NextResponse.json(
+      { error: error.message || 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
