@@ -18,6 +18,8 @@ export const CheckTokenBalanceTool = new DynamicStructuredTool({
     const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/agent/check-token-balance`;
 
     const balances: Record<string, string> = {};
+    const formatted: Record<string, string> = {};
+    const summaries: string[] = [];
 
     for (const tokenName of tokenNames) {
       const resolved = KNOWN_TOKENS[tokenName.toUpperCase()] || tokenName;
@@ -34,15 +36,35 @@ export const CheckTokenBalanceTool = new DynamicStructuredTool({
           res.status
         );
         balances[tokenName.toUpperCase()] = 'FetchFailed';
+        formatted[tokenName.toUpperCase()] = 'Unavailable';
+        summaries.push(`Unable to retrieve balance for ${tokenName.toUpperCase()}.`);
         continue;
       }
 
       const data = await res.json();
       balances[tokenName.toUpperCase()] = data.balance;
+
+      try {
+        const balance = Number(data.balance);
+        const humanFormatted = new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 6,
+        }).format(balance);
+
+        formatted[tokenName.toUpperCase()] = humanFormatted;
+        summaries.push(`Your ${tokenName.toUpperCase()} balance is ${humanFormatted} ${tokenName.toUpperCase()}.`);
+      } catch {
+        formatted[tokenName.toUpperCase()] = 'Invalid';
+        summaries.push(`Balance for ${tokenName.toUpperCase()} is invalid.`);
+      }
     }
 
-    console.log('[CheckTokenBalanceTool] Final balances:', balances);
+    console.log('[CheckTokenBalanceTool] Final balances:', formatted);
 
-    return balances; // MUST return an object, NOT a string
+    return {
+      balances,
+      formatted,
+      message: summaries.join(' '),
+    };
   },
 });
