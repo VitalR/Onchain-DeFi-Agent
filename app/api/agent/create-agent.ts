@@ -9,6 +9,7 @@ import { ApproveStablecoinsTool } from '@/app/agent/tools/approveStablecoinsTool
 import { CheckNativeBalanceTool } from '@/app/agent/tools/checkNativeBalanceTool';
 import { CheckTokenAllowanceTool } from '@/app/agent/tools/checkTokenAllowanceTool';
 import { CheckTokenBalanceTool } from '@/app/agent/tools/checkTokenBalanceTool';
+import { RevokeTokenAllowanceTool } from '@/app/agent/tools/revokeTokenAllowanceTool';
 import { SwapTokensTool } from '@/app/agent/tools/swapTokensTool';
 
 /**
@@ -70,6 +71,7 @@ export async function createAgent(): Promise<
       CheckNativeBalanceTool,
       CheckTokenAllowanceTool,
       CheckTokenBalanceTool,
+      RevokeTokenAllowanceTool,
       SwapTokensTool,
     ];
     const memory = new MemorySaver();
@@ -129,6 +131,18 @@ export async function createAgent(): Promise<
         
         - When approving, clarify to the user that they're authorizing the Aerodrome Router contract
           to access their tokens for trades.
+
+        Remove and Revoke Allowance Rules:
+        - When a user says something like:
+          - "Remove EURC approval for Aerodrome"
+          - "Revoke USDC access"
+          - "Reset token approval"
+        → Use the 'revoke_token_allowance' tool to set the token allowance to zero.
+        - If the token is not provided, politely ask the user for the token contract address.
+        - Always resolve token names to addresses when possible:
+          - EURC: 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42
+          - USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+        - Call 'revoke_token_allowance' with the resolved address and confirm to the user once it's done.
 
         Swap Rules:
         - If the user says "Swap X EURC to USDC" or similar:
