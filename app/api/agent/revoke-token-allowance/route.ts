@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       args: [walletAddress, ROUTER_ADDRESS],
     });
 
-    if (allowance === 0n) {
+    if (allowance === BigInt(0)) {
       return NextResponse.json({
         alreadyZero: true,
         message: 'Allowance already zero — nothing to revoke.',
@@ -72,11 +72,11 @@ export async function POST(req: Request) {
     }
 
     // Proceed with onchain revoke
-    const txHash = await client.sendOnchainAction({
+    const { txHash } = await client.sendOnchainAction({
       contractAddress: tokenAddress,
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [ROUTER_ADDRESS, 0],
+      args: [ROUTER_ADDRESS, BigInt(0)],
     });
 
     return NextResponse.json({

@@ -1,5 +1,5 @@
 import { prepareAgentkitAndWalletProvider } from '../api/agent/prepare-agentkit';
-import { encodeFunctionData } from 'viem';
+import { encodeFunctionData, type Abi } from 'viem';
 
 // Cache the client instances
 let cachedAgentKit: any = null;
@@ -26,35 +26,48 @@ export async function getClient() {
         abi,
         functionName,
         args,
+        value = '0x0',
       }: {
         contractAddress: string;
-        abi: any;
+        abi: Abi;
         functionName: string;
         args: any[];
+        value?: string;
       }) => {
+        if (!abi || !functionName || !args) {
+          throw new Error('abi, functionName, and args are required');
+        }
+
         const data = encodeFunctionData({
           abi,
           functionName,
           args,
         });
 
-        console.log('Sending transaction:', {
-          to: contractAddress,
-          data,
+        console.log('Sending contract write:', {
+          contractAddress,
+          functionName,
+          args,
         });
 
-        const txHash = await walletProvider.sendTransaction({
-          to: contractAddress,
-          data,
-        });
+        try {
+          const txHash = await (walletProvider as any).sendTransaction({
+            to: contractAddress,
+            data,
+            value,
+          });
 
-        console.log('Transaction sent:', txHash);
-        return txHash;
+          console.log('Transaction sent:', txHash);
+          return { txHash };
+        } catch (error) {
+          console.error('Transaction failed:', error);
+          throw error;
+        }
       },
 
       readContract: async (params: any) => {
         console.log('Reading contract:', params);
-        return await walletProvider.readContract(params);
+        return await (walletProvider as any).readContract(params);
       },
 
       getAddress: async () => {

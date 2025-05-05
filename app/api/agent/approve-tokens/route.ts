@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       `Approving ${amount} of token ${tokenAddress} to router ${ROUTER_ADDRESS}`
     );
 
-    const txHash = await client.sendOnchainAction({
+    const { txHash } = await client.sendOnchainAction({
       contractAddress: tokenAddress,
       abi: ERC20_ABI,
       functionName: 'approve',
@@ -48,6 +48,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Approve Tokens Error:', error.message || error);
-    return NextResponse.json({ error: error.message || 'Unknown error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
